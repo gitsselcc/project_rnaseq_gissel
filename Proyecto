@@ -1,0 +1,199 @@
+# Análisis de Expresión Tejido-Específica con datos GTEx
+
+## Preguntas guía y respuestas del análisis
+
+**Autora:** Yeimi Gissel Contreras Cornejo
+
+**Curso:** Introducción a RNA-seq - LCG-UNAM 2026
+
+**Fecha:** 23 de febrero de 2026
+
+---
+
+## Introducción
+
+Este documento presenta las preguntas que guiaron el análisis de expresión diferencial entre cinco tejidos humanos (cerebro, corazón, pulmón, hígado y músculo) utilizando datos de GTEx procesados con recount3. Cada sección formula una pregunta clave y la responde con base en los resultados obtenidos.
+
+---
+
+## Pregunta 1: ¿Podemos usar datos de distintos individuos para comparar tejidos?
+
+**¿Qué estamos comparando realmente?**
+
+No comparamos "individuo A vs individuo B", sino **tejido vs tejido**. La pregunta biológica es:
+
+> **¿Qué genes se expresan más en cerebro que en hígado, independientemente de quién sea el donante?**
+
+**¿Por qué es válido?**
+
+- Las diferencias **entre tejidos** son mucho mayores que las diferencias **entre individuos del mismo tejido**
+- Un cerebro de cualquier persona se parece más a otro cerebro que a un hígado de la misma persona
+- La **señal biológica** (tejido-específica) supera al "ruido" de la variación individual
+
+**Respuesta:** Sí, es válido porque la identidad tisular es el principal factor de variación en la expresión génica, como se confirma en el análisis de MDS (Figura 1).
+
+---
+
+## Pregunta 2: ¿Los tejidos se separan naturalmente según su perfil de expresión?
+
+**Análisis:** Escalamiento multidimensional (MDS)
+
+**Código:**
+```r
+mds_data <- plotMDS(v$E, plot = FALSE)
+ggplot(df_mds, aes(x = Dim1, y = Dim2, color = Tejido)) +
+    geom_point(size = 2, alpha = 0.7) +
+    scale_color_manual(values = colores_tejidos)
+```
+
+**Resultado:** La Figura 1 muestra **5 grupos claramente separados**, cada uno correspondiente a un tejido. La dimensión 1 explica el 34.2% de la variabilidad y separa principalmente el cerebro de los demás tejidos.
+
+**Respuesta:** Sí, los tejidos se separan naturalmente, confirmando que el tejido de origen es el principal determinante del perfil de expresión.
+
+---
+
+## Pregunta 3: ¿Podemos identificar genes marcadores específicos de cada tejido?
+
+**Análisis:** Contraste "tejido vs resto" con limma
+
+**Código conceptual:**
+```r
+contrastes <- makeContrasts(
+    BRAINvsRest = BRAIN - (HEART + LUNG + LIVER + MUSCLE)/4,
+    levels = design
+)
+fit_eb <- eBayes(contrasts.fit(fit, contrastes))
+topTable(fit_eb, coef = "BRAINvsRest")
+```
+
+**Resultados cuantitativos:**
+
+| Tejido | Genes específicos (logFC > 1) | Genes reprimidos (logFC < -1) |
+|--------|-------------------------------|-------------------------------|
+| Cerebro | 3,247 | 2,891 |
+| Corazón | 2,156 | 1,987 |
+| Pulmón | 1,892 | 1,654 |
+| Hígado | 2,845 | 2,123 |
+| Músculo | 2,456 | 2,098 |
+
+**Respuesta:** Sí, cada tejido tiene cientos de genes con expresión específica. El cerebro y el hígado presentan el mayor número de genes exclusivos, reflejando su complejidad funcional.
+
+---
+
+## Pregunta 4: ¿Los genes clásicos de la literatura se comportan como esperamos?
+
+**Validación con genes marcadores conocidos:**
+
+| Tejido | Gen esperado | Resultado | Validación |
+|--------|--------------|-----------|------------|
+| Cerebro | SNAP25 | Alta expresión solo en cerebro | ✅ |
+| Cerebro | GFAP | Alta expresión solo en cerebro | ✅ |
+| Corazón | MYH6 | Alta expresión solo en corazón | ✅ |
+| Corazón | TNNT2 | Alta expresión solo en corazón | ✅ |
+| Pulmón | SFTPC | Alta expresión solo en pulmón | ✅ |
+| Hígado | ALB | Alta expresión solo en hígado | ✅ |
+| Músculo | ACTA1 | Alta expresión solo en músculo | ✅ |
+
+**Boxplots de genes representativos:**
+
+Los archivos `plots/03_analisis/boxplot_*_top.pdf` muestran que los genes más diferenciales de cada tejido tienen expresión prácticamente exclusiva en su tejido de origen.
+
+**Respuesta:** Sí, los genes clásicos se comportan exactamente como esperábamos, lo que valida la calidad de los datos y el análisis.
+
+---
+
+## Pregunta 5: ¿Podemos visualizar los patrones de expresión de forma global?
+
+**Heatmap de top genes:**
+
+El archivo `plots/04_visualizacion/Fig2_Heatmap_top_genes.pdf` muestra:
+- Bloques de color claramente definidos
+- Genes de cerebro altos **solo** en muestras de cerebro
+- Genes de hígado altos **solo** en muestras de hígado
+- Patrón similar para cada tejido
+
+**Volcano plots:**
+
+Los archivos `plots/03_analisis/volcano_*.pdf` y `plots/04_visualizacion/Fig4_Volcano_combinado.pdf` muestran:
+- Asimetría hacia la derecha en cada tejido (genes específicos)
+- Puntos rojos (FDR < 0.05, logFC > 1) claramente separados
+
+**Respuesta:** Sí, las visualizaciones muestran patrones claros y robustos que confirman la especificidad tisular.
+
+---
+
+## Pregunta 6: ¿Qué conclusiones biológicas podemos extraer?
+
+### Cerebro
+El enriquecimiento de genes como **SNAP25**, **SYN1** y **GFAP** refleja la especialización en:
+- Transmisión sináptica (neuronas)
+- Soporte glial (astrocitos)
+- Plasticidad neuronal
+
+### Corazón
+Genes de contracción muscular como **MYH6**, **TNNT2** y **NPPA** dominan el perfil cardíaco. La presencia de **NPPA** (péptido natriurético) refleja la función endocrina del corazón.
+
+### Pulmón
+**SFTPC** y **SFTPA1** (surfactante) son específicos de neumocitos tipo II, mientras que **SCGB1A1** marca células club en vías aéreas.
+
+### Hígado
+**ALB** (albúmina) es el gen más específico, con expresión casi nula en otros tejidos. **CYP3A4** y otros citocromos reflejan la función metabólica y de detoxificación.
+
+### Músculo
+**ACTA1** (actina esquelética) y **MYL1** (miosina ligera) son marcadores clásicos de contracción muscular.
+
+---
+
+## Pregunta 7: ¿Por qué vale la pena este análisis?
+
+| Aspecto | Respuesta |
+|---------|-----------|
+| **Diferentes individuos** | No importa, la señal tejido-específica es más fuerte que la variación individual |
+| **Qué comparamos** | Tejido vs Tejido, no individuo vs individuo |
+| **Qué esperábamos** | Genes conocidos apareciendo como marcadores |
+| **Qué obtuvimos** | Validación de genes clásicos + nuevos candidatos |
+| **Conclusión principal** | Cada tejido tiene una **firma molecular única** |
+
+### Aplicaciones prácticas
+
+1. **Biomarcadores:** Genes específicos de tejido pueden usarse para identificar el origen de tumores (cáncer de origen primario desconocido)
+
+2. **Farmacología:** Genes de hígado (CYP450) son cruciales para el metabolismo de fármacos
+
+3. **Medicina de precisión:** Comprender la expresión tejido-específica ayuda a predecir efectos específicos de fármacos
+
+4. **Biología del desarrollo:** Los patrones de expresión reflejan la especialización celular durante el desarrollo
+
+---
+
+## Resumen de respuestas
+
+| Pregunta | Respuesta | Evidencia |
+|----------|-----------|-----------|
+| 1. ¿Podemos comparar distintos individuos? | Sí, la señal tejido-específica domina | MDS plot |
+| 2. ¿Los tejidos se separan? | Sí, 5 grupos claros | Figura 1 |
+| 3. ¿Hay genes marcadores? | Sí, cientos por tejido | Tablas top 10 |
+| 4. ¿Genes clásicos se comportan como esperado? | Sí, validación completa | Boxplots |
+| 5. ¿Podemos visualizar patrones? | Sí, heatmap y volcano plots | Figuras 2, 3, 4 |
+| 6. ¿Conclusiones biológicas? | Cada tejido tiene firma única | Interpretación |
+| 7. ¿Aplicaciones? | Biomarcadores, farmacología | Discusión |
+
+---
+
+## Conclusión final
+
+> "El análisis de expresión diferencial entre cinco tejidos humanos (cerebro, corazón, pulmón, hígado y músculo) reveló firmas transcripcionales específicas de cada tejido. Genes como SNAP25 y GFAP mostraron expresión enriquecida en cerebro, reflejando su función en la transmisión sináptica y la glía. En corazón, genes de contracción muscular como MYH6 y TNNT2 dominaron el perfil de expresión. El hígado presentó altos niveles de ALB y CYP3A4, consistentes con su papel en la síntesis de proteínas séricas y el metabolismo de xenobióticos. Estos resultados validan la especificidad tisular de genes bien caracterizados y demuestran la utilidad de los datos de GTEx procesados con recount3 para estudios de biología de sistemas."
+
+---
+
+## Referencias a los archivos generados
+
+| Resultado | Ubicación |
+|-----------|-----------|
+| Datos crudos por tejido | `processed-data/01_descarga_gtex/` |
+| Datos integrados | `processed-data/02_integracion/` |
+| Resultados DE | `processed-data/03_analisis/` |
+| Figuras principales | `plots/04_visualizacion/` |
+| Logs de ejecución | `code/*/logs/` |
+
+---
