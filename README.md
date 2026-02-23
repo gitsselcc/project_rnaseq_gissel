@@ -6,9 +6,10 @@
 
 **Instructor:** Leonardo Collado-Torres
 
-**Repositorio:** 
+**Repositorio:** https://github.com/gitsselcc/project_rnaseq_gissel 
 
 ---
+NOTA IMPORTANTE: ARCHIVOS RAW DEMASIADO PESADOS. 
 
 ## 📋 Tabla de Contenido
 
@@ -466,9 +467,6 @@ citation("SummarizedExperiment")
 
 ---
 
-## 📌 Nota Final
-
-> "La ciencia reproducible no es solo una opción, es una responsabilidad. Este proyecto demuestra que es posible realizar análisis complejos de transcriptómica utilizando datos públicos y herramientas de código abierto, generando resultados robustos y completamente reproducibles."
 
 **Total de archivos generados:** 52  
 **Tamaño total del proyecto:** ~5.2 GB  
