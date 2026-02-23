@@ -1,0 +1,425 @@
+
+> cat("========================================\n")
+========================================
+
+> cat("Inicio de análisis:", date(), "\n")
+Inicio de análisis: Sun Feb 22 21:17:59 2026 
+
+> cat("========================================\n\n")
+========================================
+
+
+> # 1. Cargar datos normalizados
+> cat("PASO 1: Cargando datos normalizados...\n")
+PASO 1: Cargando datos normalizados...
+
+> # Cargar objetos del paso anterior
+> v <- readRDS(file.path(dir_02, "v_voom.rds"))
+
+> dge <- readRDS(file.path(dir_02, "dge_normalizado.rds"))
+
+> design <- readRDS(file.path(dir_02, "design_matrix.rds"))
+
+> # Cargar también el objeto combinado para metadatos
+> rse_combined <- readRDS(file.path(dir_02, "rse_combined_raw.rds"))
+
+> cat("  Datos cargados correctamente\n")
+  Datos cargados correctamente
+
+> cat("  Dimensiones de v$E:", paste(dim(v$E), collapse = " x "), "\n")
+  Dimensiones de v$E: 63856 x 5660 
+
+> cat("  Tejidos:", paste(colnames(design), collapse = ", "), "\n\n")
+  Tejidos: BRAIN, HEART, LIVER, LUNG, MUSCLE 
+
+
+> # 2. Definir contrastes (comparaciones)
+> cat("PASO 2: Definiendo contrastes de interés...\n")
+PASO 2: Definiendo contrastes de interés...
+
+> # Matriz de contrastes: cada tejido vs el promedio de los demás
+> # Esto identifica genes específicos de cada tejido
+> contrastes <- makeContrasts(
+ .... [TRUNCATED] 
+
+> cat("  Contrastes definidos:\n")
+  Contrastes definidos:
+
+> cat("  - BRAIN vs Resto\n")
+  - BRAIN vs Resto
+
+> cat("  - HEART vs Resto\n")
+  - HEART vs Resto
+
+> cat("  - LUNG vs Resto\n")
+  - LUNG vs Resto
+
+> cat("  - LIVER vs Resto\n")
+  - LIVER vs Resto
+
+> cat("  - MUSCLE vs Resto\n\n")
+  - MUSCLE vs Resto
+
+
+> # 3. Ajustar modelo lineal
+> cat("PASO 3: Ajustando modelo lineal con limma...\n")
+PASO 3: Ajustando modelo lineal con limma...
+
+> # Ajustar modelo
+> fit <- lmFit(v, design)
+
+> # Aplicar contrastes
+> fit_contrasts <- contrasts.fit(fit, contrastes)
+
+> # Aplicar eBayes para estadísticas moderadas
+> fit_eb <- eBayes(fit_contrasts)
+
+> cat("  Modelo ajustado correctamente\n")
+  Modelo ajustado correctamente
+
+> cat("  Grados de libertad:", fit_eb$df.total[1], "\n\n")
+  Grados de libertad: 5661.319 
+
+
+> # 4. Extraer resultados para cada tejido
+> cat("PASO 4: Extrayendo genes diferenciales por tejido...\n")
+PASO 4: Extrayendo genes diferenciales por tejido...
+
+> # Lista para guardar resultados
+> resultados_tejidos <- list()
+
+> top_genes_tejidos <- list()
+
+> for (tejido in c("BRAIN", "HEART", "LUNG", "LIVER", "MUSCLE")) {
++   contraste <- paste0(tejido, "vsRest")
++ 
++   # Obtener todos los resultados
++   .... [TRUNCATED] 
+
+  --- BRAIN ---
+    Genes totales: 63856 
+    Genes up (específicos): 19120 
+    Genes down: 42600 
+    Top 3 genes específicos:
+       1 - ENSG00000243485.5 (logFC = 2.12 , adj.P = 0e+00 )
+       2 - ENSG00000241670.3 (logFC = 1.22 , adj.P = 0e+00 )
+       3 - ENSG00000228463.9 (logFC = 0.97 , adj.P = 0e+00 )
+
+  --- HEART ---
+    Genes totales: 63856 
+    Genes up (específicos): 40611 
+    Genes down: 18529 
+    Top 3 genes específicos:
+       1 - ENSG00000228794.8 (logFC = 1.48 , adj.P = 0e+00 )
+       2 - ENSG00000187583.10 (logFC = 2.67 , adj.P = 0e+00 )
+       3 - ENSG00000187642.9 (logFC = 5.48 , adj.P = 0e+00 )
+
+  --- LUNG ---
+    Genes totales: 63856 
+    Genes up (específicos): 17960 
+    Genes down: 43183 
+    Top 3 genes específicos:
+       1 - ENSG00000268903.1 (logFC = 2.49 , adj.P = 0e+00 )
+       2 - ENSG00000269981.1 (logFC = 2.14 , adj.P = 0e+00 )
+       3 - ENSG00000239906.1 (logFC = 2.73 , adj.P = 0e+00 )
+
+  --- LIVER ---
+    Genes totales: 63856 
+    Genes up (específicos): 38985 
+    Genes down: 19395 
+    Top 3 genes específicos:
+       1 - ENSG00000224870.6 (logFC = 1.35 , adj.P = 0e+00 )
+       2 - ENSG00000008130.15 (logFC = 2.14 , adj.P = 0e+00 )
+       3 - ENSG00000157916.19 (logFC = 1.21 , adj.P = 0e+00 )
+
+  --- MUSCLE ---
+    Genes totales: 63856 
+    Genes up (específicos): 37929 
+    Genes down: 22657 
+    Top 3 genes específicos:
+       1 - ENSG00000228794.8 (logFC = 1.2 , adj.P = 0e+00 )
+       2 - ENSG00000188976.10 (logFC = 0.94 , adj.P = 0e+00 )
+       3 - ENSG00000187583.10 (logFC = 3.76 , adj.P = 0e+00 )
+
+> # 5. Guardar resultados completos
+> cat("\nPASO 5: Guardando resultados...\n")
+
+PASO 5: Guardando resultados...
+
+> saveRDS(
++   resultados_tejidos,
++   file = file.path(dir_03, "resultados_completos.rds")
++ )
+
+> saveRDS(top_genes_tejidos, file = file.path(dir_03, "top_genes_tejidos.rds"))
+
+> # Guardar como CSV para fácil consulta
+> for (tejido in names(resultados_tejidos)) {
++   write.csv(
++     resultados_tejidos[[tejido]],
++     file = .... [TRUNCATED] 
+
+> cat("  Resultados guardados en:", dir_03, "\n\n")
+  Resultados guardados en: C:/Users/yeimi/Documents/project_rnaseq2026/processed-data/03_analisis 
+
+
+> # 6. Validación con genes marcadores conocidos
+> cat("PASO 6: Validando con genes marcadores conocidos...\n")
+PASO 6: Validando con genes marcadores conocidos...
+
+> # Lista de genes clásicos tejido-específicos
+> genes_conocidos <- list(
++   BRAIN = c("SNAP25", "GFAP", "SYN1", "MAP2"),
++   HEART = c("MYH6", "TNNT ..." ... [TRUNCATED] 
+
+> # Verificar si estos genes están en nuestros datos
+> # Necesitamos mapear símbolos a IDs (esto es aproximado)
+> # En GTEx, los IDs son ENSG, pero po .... [TRUNCATED] 
+
+> # Buscar coincidencias aproximadas (esto puede no encontrar todos)
+> cat("\nGenes marcadores encontrados:\n")
+
+Genes marcadores encontrados:
+
+> for (tejido in names(genes_conocidos)) {
++   cat("\n", tejido, ":\n")
++   for (gen in genes_conocidos[[tejido]]) {
++     # Buscar en rowData (esto d .... [TRUNCATED] 
+
+ BRAIN :
+SNAP25 : logFC = 8.96 , adj.P = 0e+00 
+GFAP : logFC = 10.34 , adj.P = 0e+00 
+SYN1 : logFC = -0.45 , adj.P = 1.287992e-214 
+MAP2 : logFC = 0.61 , adj.P = 1.456842e-199 
+
+ HEART :
+MYH6 : logFC = 10.39 , adj.P = 0e+00 
+TNNT2 : logFC = 10.71 , adj.P = 0e+00 
+NPPA : logFC = -0.62 , adj.P = 1.109878e-36 
+MYL2 : logFC = 6.01 , adj.P = 0e+00 
+
+ LUNG :
+SFTPC : logFC = 10.73 , adj.P = 0e+00 
+SFTPA1 : logFC = 11.79 , adj.P = 0e+00 
+SCGB1A1 : logFC = 9.36 , adj.P = 0e+00 
+AGER : logFC = -0.65 , adj.P = 1.25324e-184 
+
+ LIVER :
+ALB : logFC = 0.33 , adj.P = 1.279475e-24 
+CYP3A4 : logFC = 10.81 , adj.P = 0e+00 
+SERPINA1 : logFC = 0.33 , adj.P = 1.279475e-24 
+APOB : logFC = 0.33 , adj.P = 1.279475e-24 
+
+ MUSCLE :
+ACTA1 : logFC = 10.83 , adj.P = 0e+00 
+MYL1 : logFC = -0.03 , adj.P = 1.665498e-01 
+CKMT2 : logFC = 5.98 , adj.P = 0e+00 
+DES : logFC = 0.42 , adj.P = 4.333366e-100 
+
+> # 7. Visualizaciones principales
+> cat("\nPASO 7: Generando visualizaciones...\n")
+
+PASO 7: Generando visualizaciones...
+
+> ### 7.1 Heatmap de top genes por tejido
+> cat("  Generando heatmap de top genes...\n")
+  Generando heatmap de top genes...
+
+> # Seleccionar top 20 genes de cada tejido (los más específicos)
+> genes_seleccionados <- c()
+
+> for (tejido in names(top_genes_tejidos)) {
++   top20 <- head(top_genes_tejidos[[tejido]], 20)
++   genes_seleccionados <- c(genes_seleccionados, rown .... [TRUNCATED] 
+
+> genes_seleccionados <- unique(genes_seleccionados)
+
+> # Extraer expresión de estos genes
+> exprs_heatmap <- v$E[genes_seleccionados, ]
+
+> # Crear anotaciones para las muestras
+> annotation_col <- data.frame(
++   Tejido = factor(rse_combined$tejido_nombre)
++ )
+
+> rownames(annotation_col) <- colnames(exprs_heatmap)
+
+> # Colores para tejidos
+> colores <- brewer.pal(5, "Set1")
+
+> names(colores) <- levels(annotation_col$Tejido)
+
+> annotation_colors <- list(Tejido = colores)
+
+> # Heatmap
+> pdf(file.path(dir_plots, "heatmap_top_genes.pdf"), width = 12, height = 14)
+
+> pheatmap(
++   exprs_heatmap,
++   annotation_col = annotation_col,
++   annotation_colors = annotation_colors,
++   show_rownames = FALSE,
++   show_col .... [TRUNCATED] 
+
+> dev.off()
+null device 
+          1 
+
+> ### 7.2 Boxplots de genes marcadores conocidos
+> cat("  Generando boxplots de genes marcadores...\n")
+  Generando boxplots de genes marcadores...
+
+> # Función para hacer boxplot de un gen
+> plot_gene_boxplot <- function(gene_id, gene_name) {
++   if (!gene_id %in% rownames(v$E)) {
++     return(NUL .... [TRUNCATED] 
+
+> # Buscar un gen representativo de cada tejido
+> genes_ejemplo <- list(
++   BRAIN = list(
++     id = rownames(top_genes_tejidos[["BRAIN"]])[1],
++     .... [TRUNCATED] 
+
+> for (tejido in names(genes_ejemplo)) {
++   p <- plot_gene_boxplot(
++     genes_ejemplo[[tejido]]$id,
++     genes_ejemplo[[tejido]]$name
++   )
++   if .... [TRUNCATED] 
+
+> ### 7.3 Volcano plots
+> cat("  Generando volcano plots...\n")
+  Generando volcano plots...
+
+> for (tejido in names(resultados_tejidos)) {
++   res <- resultados_tejidos[[tejido]]
++ 
++   # Crear columna para colorear
++   res$color <- "No signif ..." ... [TRUNCATED] 
+
+> ### 7.4 MDS Plot
+> cat("  Generando MDS plot...\n")
+  Generando MDS plot...
+
+> # Calcular MDS
+> mds_data <- plotMDS(v$E, plot = FALSE)
+
+========================================
+RESUMEN DE GENES ESPECÍFICOS POR TEJIDO:
+========================================
+BRAIN     : 8133 genes específicos, 6911 genes bajos
+HEART     : 3945 genes específicos, 3696 genes bajos
+LUNG      : 7064 genes específicos, 5923 genes bajos
+LIVER     : 6234 genes específicos, 7304 genes bajos
+MUSCLE    : 4854 genes específicos, 9473 genes bajos
+
+========================================
+Información de sesión:
+─ Session info ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ setting  value
+ version  R version 4.5.1 (2025-06-13 ucrt)
+ os       Windows 11 x64 (build 26200)
+ system   x86_64, mingw32
+ ui       Positron
+ language (EN)
+ collate  Spanish_Mexico.utf8
+ ctype    Spanish_Mexico.utf8
+ tz       America/Mexico_City
+ date     2026-02-22
+ pandoc   NA
+ quarto   ERROR: Unknown command "TMPDIR=C:/Users/yeimi/AppData/Local/Temp/Rtmpi6lCla/file9d02eba373a". Did you mean command "create"? @ c:\\PROGRA~1\\Positron\\RESOUR~1\\app\\quarto\\bin\\quarto.exe
+
+─ Packages ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ package              * version   date (UTC) lib source
+ abind                  1.4-8     2024-09-12 [1] CRAN (R 4.5.2)
+ Biobase              * 2.70.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ BiocFileCache          3.0.0     2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ BiocGenerics         * 0.56.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ BiocIO                 1.20.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ BiocParallel           1.44.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ Biostrings             2.78.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ bit                    4.6.0     2025-03-06 [1] CRAN (R 4.5.1)
+ bit64                  4.6.0-1   2025-01-16 [1] CRAN (R 4.5.1)
+ bitops                 1.0-9     2024-10-03 [1] CRAN (R 4.5.2)
+ blob                   1.3.0     2026-01-14 [1] CRAN (R 4.5.2)
+ cachem                 1.1.0     2024-05-16 [1] CRAN (R 4.5.1)
+ cigarillo              1.0.0     2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ cli                    3.6.5     2025-04-23 [1] CRAN (R 4.5.1)
+ codetools              0.2-20    2024-03-31 [2] CRAN (R 4.5.1)
+ crayon                 1.5.3     2024-06-20 [1] CRAN (R 4.5.1)
+ curl                   7.0.0     2025-08-19 [1] CRAN (R 4.5.2)
+ data.table             1.18.2.1  2026-01-27 [1] CRAN (R 4.5.2)
+ DBI                    1.2.3     2024-06-02 [1] CRAN (R 4.5.2)
+ dbplyr                 2.5.1     2025-09-10 [1] CRAN (R 4.5.2)
+ DelayedArray           0.36.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ dplyr                  1.2.0     2026-02-03 [1] CRAN (R 4.5.2)
+ edgeR                * 4.8.2     2025-12-23 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ farver                 2.1.2     2024-05-13 [1] CRAN (R 4.5.1)
+ fastmap                1.2.0     2024-05-15 [1] CRAN (R 4.5.1)
+ filelock               1.0.3     2023-12-11 [1] CRAN (R 4.5.2)
+ generics             * 0.1.4     2025-05-09 [1] CRAN (R 4.5.1)
+ GenomicAlignments      1.46.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ GenomicRanges        * 1.62.1    2025-12-08 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ ggplot2              * 4.0.2     2026-02-03 [1] CRAN (R 4.5.2)
+ ggrepel                0.9.6     2024-09-07 [1] CRAN (R 4.5.2)
+ glue                   1.8.0     2024-09-30 [1] CRAN (R 4.5.1)
+ gtable                 0.3.6     2024-10-25 [1] CRAN (R 4.5.1)
+ here                 * 1.0.2     2025-09-15 [1] CRAN (R 4.5.2)
+ httr                   1.4.7     2023-08-15 [1] CRAN (R 4.5.2)
+ httr2                  1.2.2     2025-12-08 [1] CRAN (R 4.5.2)
+ IRanges              * 2.44.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ labeling               0.4.3     2023-08-29 [1] CRAN (R 4.5.0)
+ lattice                0.22-7    2025-04-02 [2] CRAN (R 4.5.1)
+ lifecycle              1.0.5     2026-01-08 [1] CRAN (R 4.5.2)
+ limma                * 3.66.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ locfit                 1.5-9.12  2025-03-05 [1] CRAN (R 4.5.2)
+ magrittr               2.0.4     2025-09-12 [1] CRAN (R 4.5.1)
+ Matrix                 1.7-3     2025-03-11 [2] CRAN (R 4.5.1)
+ MatrixGenerics       * 1.22.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ matrixStats          * 1.5.0     2025-01-07 [1] CRAN (R 4.5.2)
+ memoise                2.0.1     2021-11-26 [1] CRAN (R 4.5.1)
+ otel                   0.2.0     2025-08-29 [1] CRAN (R 4.5.2)
+ pheatmap             * 1.0.13    2025-06-05 [1] CRAN (R 4.5.2)
+ pillar                 1.11.1    2025-09-17 [1] CRAN (R 4.5.1)
+ pkgconfig              2.0.3     2019-09-22 [1] CRAN (R 4.5.1)
+ R.methodsS3            1.8.2     2022-06-13 [1] CRAN (R 4.5.2)
+ R.oo                   1.27.1    2025-05-02 [1] CRAN (R 4.5.2)
+ R.utils                2.13.0    2025-02-24 [1] CRAN (R 4.5.2)
+ R6                     2.6.1     2025-02-15 [1] CRAN (R 4.5.1)
+ ragg                   1.5.0     2025-09-02 [1] CRAN (R 4.5.2)
+ rappdirs               0.3.4     2026-01-17 [1] CRAN (R 4.5.2)
+ RColorBrewer         * 1.1-3     2022-04-03 [1] CRAN (R 4.5.0)
+ Rcpp                   1.1.1     2026-01-10 [1] CRAN (R 4.5.2)
+ RCurl                  1.98-1.17 2025-03-22 [1] CRAN (R 4.5.2)
+ recount3             * 1.20.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ restfulr               0.0.16    2025-06-27 [1] CRAN (R 4.5.2)
+ rjson                  0.2.23    2024-09-16 [1] CRAN (R 4.5.2)
+ rlang                  1.1.7     2026-01-09 [1] CRAN (R 4.5.2)
+ rprojroot              2.1.1     2025-08-26 [1] CRAN (R 4.5.2)
+ Rsamtools              2.26.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ RSQLite                2.4.5     2025-11-30 [1] CRAN (R 4.5.2)
+ rtracklayer            1.70.1    2025-12-20 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ S4Arrays               1.10.1    2025-12-01 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ S4Vectors            * 0.48.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ S7                     0.2.1     2025-11-14 [1] CRAN (R 4.5.2)
+ scales                 1.4.0     2025-04-24 [1] CRAN (R 4.5.1)
+ Seqinfo              * 1.0.0     2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ sessioninfo          * 1.2.3     2025-02-05 [1] CRAN (R 4.5.2)
+ SparseArray            1.10.8    2025-12-16 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ statmod                1.5.1     2025-10-09 [1] CRAN (R 4.5.2)
+ SummarizedExperiment * 1.40.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ systemfonts            1.3.1     2025-10-01 [1] CRAN (R 4.5.2)
+ textshaping            1.0.4     2025-10-10 [1] CRAN (R 4.5.2)
+ tibble                 3.3.1     2026-01-11 [1] CRAN (R 4.5.2)
+ tidyselect             1.2.1     2024-03-11 [1] CRAN (R 4.5.1)
+ vctrs                  0.7.1     2026-01-23 [1] CRAN (R 4.5.2)
+ withr                  3.0.2     2024-10-28 [1] CRAN (R 4.5.1)
+ XML                    3.99-0.20 2025-11-08 [1] CRAN (R 4.5.2)
+ XVector                0.50.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ yaml                   2.3.12    2025-12-10 [1] CRAN (R 4.5.2)
+
+ [1] C:/Users/yeimi/AppData/Local/R/win-library/4.5
+ [2] C:/Program Files/R/R-4.5.1/library
+ * ── Packages attached to the search path.
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
