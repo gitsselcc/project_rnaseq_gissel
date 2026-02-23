@@ -9,7 +9,7 @@
 **Repositorio:** https://github.com/gitsselcc/project_rnaseq_gissel 
 
 ---
-NOTA IMPORTANTE: ARCHIVOS RAW DEMASIADO PESADOS. 
+NOTA IMPORTANTE: ARCHIVOS RAW DEMASIADO PESADOS. No pueden subirse a Github sin comprometer el resto del proyecto. Se recomienda trabajar con cuidado y haciendo push constantemente.
 
 ## 📋 Tabla de Contenido
 
