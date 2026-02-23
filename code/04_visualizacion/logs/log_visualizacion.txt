@@ -1,0 +1,397 @@
+
+> cat("========================================\n")
+========================================
+
+> cat("Inicio de visualización:", date(), "\n")
+Inicio de visualización: Sun Feb 22 22:13:47 2026 
+
+> cat("========================================\n\n")
+========================================
+
+
+> # 1. Cargar datos necesarios
+> cat("PASO 1: Cargando datos...\n")
+PASO 1: Cargando datos...
+
+> # Cargar resultados
+> resultados_tejidos <- readRDS(file.path(dir_03, "resultados_completos.rds"))
+
+> top_genes_tejidos <- readRDS(file.path(dir_03, "top_genes_tejidos.rds"))
+
+> # Cargar datos de expresión
+> v <- readRDS(file.path(dir_02, "v_voom.rds"))
+
+> rse_combined <- readRDS(file.path(dir_02, "rse_combined_raw.rds"))
+
+> # Cargar diseño
+> design <- readRDS(file.path(dir_02, "design_matrix.rds"))
+
+> cat("  Datos cargados correctamente\n")
+  Datos cargados correctamente
+
+> cat("  Tejidos:", paste(names(resultados_tejidos), collapse = ", "), "\n\n")
+  Tejidos: BRAIN, HEART, LUNG, LIVER, MUSCLE 
+
+
+> # 2. Preparar metadatos y colores
+> cat("PASO 2: Preparando metadatos y paletas de colores...\n")
+PASO 2: Preparando metadatos y paletas de colores...
+
+> # Mapa de tejidos a nombres en español
+> tejido_nombres <- c(
++     "BRAIN" = "Cerebro",
++     "HEART" = "Corazón",
++     "LUNG" = "Pulmón",
++     " ..." ... [TRUNCATED] 
+
+> # Crear factor de tejido con nombres en español
+> tejido_factor <- factor(rse_combined$tejido_nombre, levels = tejido_nombres)
+
+> # Paleta de colores para tejidos (5 colores distintos)
+> colores_tejidos <- c(
++     "Cerebro" = "#E41A1C", # rojo
++     "Corazón" = "#377EB8", # az .... [TRUNCATED] 
+
+> cat("  Paleta de colores definida\n\n")
+  Paleta de colores definida
+
+
+> # 4. FIGURA 1: Heatmap de top genes
+> cat("\nPASO 4: Generando Figura 2 - Heatmap de top genes\n")
+
+PASO 4: Generando Figura 2 - Heatmap de top genes
+
+> # Seleccionar top 20 genes de cada tejido (los más específicos)
+> genes_seleccionados <- c()
+
+> tejido_origen <- c()
+
+> for (tejido in names(top_genes_tejidos)) {
++     top20 <- head(
++         top_genes_tejidos[[tejido]][top_genes_tejidos[[tejido]]$logFC > 0, ],
++    .... [TRUNCATED] 
+
+> # Eliminar duplicados (por si un gen es top en múltiples tejidos)
+> dup_idx <- duplicated(genes_seleccionados)
+
+> genes_seleccionados <- genes_seleccionados[!dup_idx]
+
+> tejido_origen <- tejido_origen[!dup_idx]
+
+> # Extraer expresión
+> exprs_heatmap <- v$E[genes_seleccionados, ]
+
+> # Escalar por filas (genes)
+> exprs_scaled <- t(scale(t(exprs_heatmap)))
+
+> # Anotaciones para columnas (muestras)
+> annotation_col <- data.frame(
++     Tejido = tejido_factor
++ )
+
+> rownames(annotation_col) <- colnames(exprs_scaled)
+
+> # Anotaciones para filas (genes) - mostrar solo algunos nombres
+> annotation_row <- data.frame(
++     Tejido_origen = factor(tejido_origen, levels = .... [TRUNCATED] 
+
+> rownames(annotation_row) <- genes_seleccionados
+
+> # Mostrar nombres solo para genes seleccionados (para no saturar)
+> # Elegimos 5 genes representativos por tejido para mostrar nombres
+> genes_para_ .... [TRUNCATED] 
+
+> for (tejido in names(top_genes_tejidos)) {
++     top5 <- head(
++         top_genes_tejidos[[tejido]][top_genes_tejidos[[tejido]]$logFC > 0, ],
++     .... [TRUNCATED] 
+
+> # Crear vector de nombres a mostrar
+> rownames_labels <- ifelse(
++     rownames(exprs_scaled) %in% genes_para_mostrar,
++     rownames(exprs_scaled), .... [TRUNCATED] 
+
+> # Colores
+> annotation_colors <- list(
++     Tejido = colores_tejidos,
++     Tejido_origen = colores_tejidos
++ )
+
+> # Heatmap
+> pdf(file.path(dir_plots, "Fig2_Heatmap_top_genes.pdf"), width = 14, height = 16)
+
+> pheatmap(
++     exprs_scaled,
++     annotation_col = annotation_col,
++     annotation_row = annotation_row,
++     annotation_colors = annotation_col .... [TRUNCATED] 
+
+> dev.off()
+null device 
+          1 
+
+> cat(" Figura 2 guardada\n")
+ Figura 2 guardada
+
+> # 5. FIGURA 2: Boxplots de genes marcadores clásicos
+> cat("\nPASO 5: Generando Figura 3 - Boxplots de genes marcadores\n")
+
+PASO 5: Generando Figura 3 - Boxplots de genes marcadores
+
+> # Función para crear boxplot
+> create_gene_boxplot <- function(gene_id, gene_name, tejido_esperado) {
++     if (!gene_id %in% rownames(v$E)) {
++     .... [TRUNCATED] 
+
+> # Genes clásicos para cada tejido (necesitamos IDs reales)
+> # Como no tenemos los símbolos exactos, usamos los top genes de cada tejido
+> genes_eje .... [TRUNCATED] 
+
+> # Crear lista de plots
+> plots_list <- list()
+
+> for (tejido in names(genes_ejemplo)) {
++     p <- create_gene_boxplot(
++         genes_ejemplo[[tejido]]$id,
++         genes_ejemplo[[tejido]]$nombr .... [TRUNCATED] 
+
+> # Combinar en una sola figura
+> fig3_boxplots <- plot_grid(
++     plotlist = plots_list,
++     ncol = 2,
++     labels = "AUTO",
++     label_size = 1 .... [TRUNCATED] 
+
+> ggsave(
++     file.path(dir_plots, "Fig3_Boxplots_genes_marcadores.pdf"),
++     fig3_boxplots,
++     width = 12,
++     height = 10
++ )
+
+> ggsave(
++     file.path(dir_plots, "Fig3_Boxplots_genes_marcadores.png"),
++     fig3_boxplots,
++     width = 12,
++     height = 10,
++     dpi = 300
+ .... [TRUNCATED] 
+
+> cat("  Figura 3 guardada\n")
+  Figura 3 guardada
+
+> # 6. FIGURA 3: Volcano plots combinados
+> cat("\nPASO 6: Generando Figura 4 - Volcano plots\n")
+
+PASO 6: Generando Figura 4 - Volcano plots
+
+> # Función para crear volcano plot
+> create_volcano <- function(res, tejido_nombre) {
++     res$color <- "No significativo"
++     res$color[res$logFC .... [TRUNCATED] 
+
+> # Crear volcano plots para cada tejido
+> volcano_plots <- list()
+
+> for (tejido in names(resultados_tejidos)) {
++     p <- create_volcano(resultados_tejidos[[tejido]], tejido_nombres[tejido])
++     volcano_plots[[tej .... [TRUNCATED] 
+
+> # Combinar en una sola figura
+> fig4_volcano <- plot_grid(
++     plotlist = volcano_plots,
++     ncol = 3,
++     labels = "AUTO",
++     label_size = .... [TRUNCATED] 
+
+> ggsave(
++     file.path(dir_plots, "Fig4_Volcano_combinado.pdf"),
++     fig4_volcano,
++     width = 15,
++     height = 10
++ )
+
+> ggsave(
++     file.path(dir_plots, "Fig4_Volcano_combinado.png"),
++     fig4_volcano,
++     width = 15,
++     height = 10,
++     dpi = 300
++ )
+
+> cat("  Figura 4 guardada\n")
+  Figura 4 guardada
+
+> # 7. FIGURA 4: Gráfico de barras - Número de genes específicos
+> cat("\nPASO 7: Generando Figura 5 - Barplot de genes específicos\n")
+
+PASO 7: Generando Figura 5 - Barplot de genes específicos
+
+> # Contar genes específicos por tejido
+> df_counts <- data.frame(
++     Tejido = factor(tejido_nombres, levels = tejido_nombres),
++     Especificos = .... [TRUNCATED] 
+
+> # Reformatear para ggplot
+> df_counts_long <- melt(
++     df_counts,
++     id.vars = "Tejido",
++     variable.name = "Tipo",
++     value.name = "Con ..." ... [TRUNCATED] 
+
+> df_counts_long$Tipo <- factor(
++     df_counts_long$Tipo,
++     levels = c("Especificos", "Bajos"),
++     labels = c("Específicos del tejido", "Repr ..." ... [TRUNCATED] 
+
+> fig5_barras <- ggplot(
++     df_counts_long,
++     aes(x = Tejido, y = Conteo, fill = Tipo)
++ ) +
++     geom_bar(stat = "identity", position = "dodg ..." ... [TRUNCATED] 
+
+> ggsave(
++     file.path(dir_plots, "Fig5_Barplot_genes_especificos.pdf"),
++     fig5_barras,
++     width = 10,
++     height = 7
++ )
+
+> ggsave(
++     file.path(dir_plots, "Fig5_Barplot_genes_especificos.png"),
++     fig5_barras,
++     width = 10,
++     height = 7,
++     dpi = 300
++ )
+
+> cat("  Figura 5 guardada\n")
+  Figura 5 guardada
+
+> # 8. Generar tabla resumen para el reporte
+> cat("\nPASO 8: Generando tablas resumen\n")
+
+PASO 8: Generando tablas resumen
+
+> # Top 10 genes específicos de cada tejido
+> for (tejido in names(resultados_tejidos)) {
++     res <- resultados_tejidos[[tejido]]
++     top10 <- res .... [TRUNCATED] 
+
+> # 9. Resumen final
+> cat("\n========================================\n")
+
+========================================
+
+> cat("RESUMEN DE FIGURAS GENERADAS:\n")
+RESUMEN DE FIGURAS GENERADAS:
+
+> cat("========================================\n")
+========================================
+
+> cat("Figura 1: Heatmap - Top genes específicos\n")
+Figura 1: Heatmap - Top genes específicos
+
+> cat("Figura 2: Boxplots - Genes marcadores\n")
+Figura 2: Boxplots - Genes marcadores
+
+> cat("Figura 3: Volcano plots - Todos los tejidos\n")
+Figura 3: Volcano plots - Todos los tejidos
+
+> cat("Figura 4: Barplot - Conteo de genes específicos\n\n")
+Figura 4: Barplot - Conteo de genes específicos
+
+
+> cat("Archivos guardados en:\n")
+Archivos guardados en:
+
+> cat("  -", dir_plots, "\n\n")
+  - C:/Users/yeimi/Documents/project_rnaseq2026/plots/04_visualizacion 
+
+
+> # 10. Información de sesión
+> cat("========================================\n")
+========================================
+
+> cat("Información de sesión:\n")
+Información de sesión:
+
+> sessioninfo::session_info()
+─ Session info ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ setting  value
+ version  R version 4.5.1 (2025-06-13 ucrt)
+ os       Windows 11 x64 (build 26200)
+ system   x86_64, mingw32
+ ui       Positron
+ language (EN)
+ collate  Spanish_Mexico.utf8
+ ctype    Spanish_Mexico.utf8
+ tz       America/Mexico_City
+ date     2026-02-22
+ pandoc   NA
+ quarto   ERROR: Unknown command "TMPDIR=C:/Users/yeimi/AppData/Local/Temp/Rtmpgjvy3K/file38b8120e1ad5". Did you mean command "remove"? @ c:\\PROGRA~1\\Positron\\RESOUR~1\\app\\quarto\\bin\\quarto.exe
+
+─ Packages ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ package              * version date (UTC) lib source
+ abind                  1.4-8   2024-09-12 [1] CRAN (R 4.5.2)
+ Biobase                2.70.0  2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ BiocGenerics           0.56.0  2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ cli                    3.6.5   2025-04-23 [1] CRAN (R 4.5.1)
+ cowplot              * 1.2.0   2025-07-07 [1] CRAN (R 4.5.2)
+ DelayedArray           0.36.0  2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ dplyr                * 1.2.0   2026-02-03 [1] CRAN (R 4.5.2)
+ farver                 2.1.2   2024-05-13 [1] CRAN (R 4.5.1)
+ generics               0.1.4   2025-05-09 [1] CRAN (R 4.5.1)
+ GenomicRanges          1.62.1  2025-12-08 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ ggplot2              * 4.0.2   2026-02-03 [1] CRAN (R 4.5.2)
+ ggrepel              * 0.9.6   2024-09-07 [1] CRAN (R 4.5.2)
+ glue                   1.8.0   2024-09-30 [1] CRAN (R 4.5.1)
+ gridExtra            * 2.3     2017-09-09 [1] CRAN (R 4.5.2)
+ gtable                 0.3.6   2024-10-25 [1] CRAN (R 4.5.1)
+ here                 * 1.0.2   2025-09-15 [1] CRAN (R 4.5.2)
+ IRanges                2.44.0  2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ labeling               0.4.3   2023-08-29 [1] CRAN (R 4.5.0)
+ lattice                0.22-7  2025-04-02 [2] CRAN (R 4.5.1)
+ lifecycle              1.0.5   2026-01-08 [1] CRAN (R 4.5.2)
+ limma                  3.66.0  2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ magrittr               2.0.4   2025-09-12 [1] CRAN (R 4.5.1)
+ Matrix                 1.7-3   2025-03-11 [2] CRAN (R 4.5.1)
+ MatrixGenerics         1.22.0  2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ matrixStats            1.5.0   2025-01-07 [1] CRAN (R 4.5.2)
+ pheatmap             * 1.0.13  2025-06-05 [1] CRAN (R 4.5.2)
+ pillar                 1.11.1  2025-09-17 [1] CRAN (R 4.5.1)
+ pkgconfig              2.0.3   2019-09-22 [1] CRAN (R 4.5.1)
+ plyr                   1.8.9   2023-10-02 [1] CRAN (R 4.5.2)
+ R6                     2.6.1   2025-02-15 [1] CRAN (R 4.5.1)
+ ragg                   1.5.0   2025-09-02 [1] CRAN (R 4.5.2)
+ RColorBrewer         * 1.1-3   2022-04-03 [1] CRAN (R 4.5.0)
+ Rcpp                   1.1.1   2026-01-10 [1] CRAN (R 4.5.2)
+ reshape2             * 1.4.5   2025-11-12 [1] CRAN (R 4.5.2)
+ rlang                  1.1.7   2026-01-09 [1] CRAN (R 4.5.2)
+ rprojroot              2.1.1   2025-08-26 [1] CRAN (R 4.5.2)
+ S4Arrays               1.10.1  2025-12-01 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ S4Vectors              0.48.0  2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ S7                     0.2.1   2025-11-14 [1] CRAN (R 4.5.2)
+ scales                 1.4.0   2025-04-24 [1] CRAN (R 4.5.1)
+ Seqinfo                1.0.0   2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ sessioninfo          * 1.2.3   2025-02-05 [1] CRAN (R 4.5.2)
+ SparseArray            1.10.8  2025-12-16 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ statmod                1.5.1   2025-10-09 [1] CRAN (R 4.5.2)
+ stringi                1.8.7   2025-03-27 [1] CRAN (R 4.5.0)
+ stringr                1.6.0   2025-11-04 [1] CRAN (R 4.5.2)
+ SummarizedExperiment   1.40.0  2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ systemfonts            1.3.1   2025-10-01 [1] CRAN (R 4.5.2)
+ textshaping            1.0.4   2025-10-10 [1] CRAN (R 4.5.2)
+ tibble                 3.3.1   2026-01-11 [1] CRAN (R 4.5.2)
+ tidyselect             1.2.1   2024-03-11 [1] CRAN (R 4.5.1)
+ vctrs                  0.7.1   2026-01-23 [1] CRAN (R 4.5.2)
+ withr                  3.0.2   2024-10-28 [1] CRAN (R 4.5.1)
+ XVector                0.50.0  2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+
+ [1] C:/Users/yeimi/AppData/Local/R/win-library/4.5
+ [2] C:/Program Files/R/R-4.5.1/library
+ * ── Packages attached to the search path.
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+> sink()
