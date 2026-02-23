@@ -1,0 +1,394 @@
+
+> cat("========================================\n")
+========================================
+
+> cat("Inicio de integración:", date(), "\n")
+Inicio de integración: Sun Feb 22 21:02:22 2026 
+
+> cat("========================================\n\n")
+========================================
+
+
+> # 1. Cargar los datos descargados
+> cat("PASO 1: Cargando datos de los 5 tejidos...\n")
+PASO 1: Cargando datos de los 5 tejidos...
+
+> # Lista de tejidos que descargamos
+> tejidos <- c("BRAIN", "HEART", "LUNG", "LIVER", "MUSCLE")
+
+> # Cargar cada tejido
+> lista_rse <- list()
+
+> for (tejido in tejidos) {
++     archivo <- file.path(dir_01, paste0("rse_", tejido, ".rds"))
++     if (file.exists(archivo)) {
++         cat("  Carg ..." ... [TRUNCATED] 
+  Cargando BRAIN ...
+  Cargando HEART ...
+  Cargando LUNG ...
+  Cargando LIVER ...
+  Cargando MUSCLE ...
+
+> # Verificar que todos se cargaron
+> cat("\nTejidos cargados:", paste(names(lista_rse), collapse = ", "), "\n")
+
+Tejidos cargados: BRAIN, HEART, LUNG, LIVER, MUSCLE 
+
+> cat("Número de tejidos:", length(lista_rse), "\n\n")
+Número de tejidos: 5 
+
+
+> # 2. Unir todos los tejidos en un solo objeto
+> cat("PASO 2: Uniendo todos los tejidos...\n")
+PASO 2: Uniendo todos los tejidos...
+
+> # Primero, necesitamos que todos tengan los mismos genes
+> # Tomamos los nombres de genes del primer tejido
+> genes_comunes <- rownames(lista_rse[[1 .... [TRUNCATED] 
+
+> # Verificamos que los demás tengan los mismos genes
+> for (tejido in names(lista_rse)[-1]) {
++     genes_actuales <- rownames(lista_rse[[tejido]])
++ .... [TRUNCATED] 
+
+> cat("  Genes comunes a todos los tejidos:", length(genes_comunes), "\n")
+  Genes comunes a todos los tejidos: 63856 
+
+> # Subsetear cada tejido a los genes comunes
+> for (tejido in names(lista_rse)) {
++     lista_rse[[tejido]] <- lista_rse[[tejido]][genes_comunes, ]
++ .... [TRUNCATED] 
+
+> # Ahora unimos por columnas (cbind)
+> # Pero antes, agregamos una columna con el nombre del tejido en colData
+> for (tejido in names(lista_rse)) {
++ .... [TRUNCATED] 
+
+> # Unir todos los objetos
+> rse_combined <- do.call(cbind, lista_rse)
+
+> cat("  Objeto combinado creado:\n")
+  Objeto combinado creado:
+
+> cat("  - Genes:", nrow(rse_combined), "\n")
+  - Genes: 63856 
+
+> cat("  - Muestras totales:", ncol(rse_combined), "\n")
+  - Muestras totales: 5660 
+
+> cat(
++     "  - Tejidos incluidos:",
++     paste(unique(rse_combined$tejido), collapse = ", "),
++     "\n\n"
++ )
+  - Tejidos incluidos: BRAIN, HEART, LUNG, LIVER, MUSCLE 
+
+
+> # 3. Control de calidad básico
+> cat("PASO 3: Control de calidad...\n")
+PASO 3: Control de calidad...
+
+> # Verificar valores missing
+> if (any(is.na(assay(rse_combined, "counts")))) {
++     cat(" Hay valores NA en las cuentas. Eliminando...\n")
++     as .... [TRUNCATED] 
+
+> # Calcular estadísticas por muestra
+> rse_combined$total_reads <- colSums(assay(rse_combined, "counts"))
+
+> rse_combined$detected_genes <- colSums(assay(rse_combined, "counts") > 0)
+
+> cat("\nResumen de lecturas totales por tejido:\n")
+
+Resumen de lecturas totales por tejido:
+
+> for (tejido in unique(rse_combined$tejido)) {
++     idx <- which(rse_combined$tejido == tejido)
++     cat(
++         "  -",
++         tejido,
++      .... [TRUNCATED] 
+  - BRAIN : media = 40.2 M lecturas, rango = [ 2.6 - 195.8 M]
+  - HEART : media = 41.6 M lecturas, rango = [ 4.3 - 115.2 M]
+  - LUNG : media = 36.7 M lecturas, rango = [ 6.2 - 92.3 M]
+  - LIVER : media = 38.7 M lecturas, rango = [ 24.2 - 128.3 M]
+  - MUSCLE : media = 42.5 M lecturas, rango = [ 3.8 - 109.8 M]
+
+> # 4. Normalización con edgeR
+> cat("\nPASO 4: Normalización con edgeR...\n")
+
+PASO 4: Normalización con edgeR...
+
+> # Crear objeto DGEList
+> dge <- DGEList(
++     counts = assay(rse_combined, "counts"),
++     genes = rowData(rse_combined),
++     samples = colData( .... [TRUNCATED] 
+
+> # Calcular factores de normalización (TMM)
+> dge <- calcNormFactors(dge)
+
+> cat("  Factores de normalización calculados\n")
+  Factores de normalización calculados
+
+> cat("  Rango de factores:", round(range(dge$samples$norm.factors), 3), "\n")
+  Rango de factores: 0.155 1.981 
+
+> # 5. Transformación con voom para limma
+> # 5. Transformación con voom para limma
+> cat("\nPASO 5: Transformación voom...\n")
+
+PASO 5: Transformación voom...
+
+> # Diseño experimental (modelo)
+> tejido_factor <- factor(dge$samples$tejido)
+
+> design <- model.matrix(~ 0 + tejido_factor)
+
+> colnames(design) <- levels(tejido_factor)
+
+> # Voom - SIN plot=TRUE para evitar conflictos
+> v <- voom(dge, design, plot = FALSE)
+
+> # Ahora SÍ generamos nuestro propio plot
+> pdf(file.path(dir_plots, "voom_mean_variance.pdf"), width = 8, height = 6)
+
+> # Calcular medias y varianzas
+> mean_exp <- rowMeans(v$E)
+
+> var_exp <- rowVars(v$E)
+
+> # Plot
+> plot(
++     mean_exp,
++     var_exp,
++     pch = 16,
++     cex = 0.5,
++     col = rgb(0, 0, 0, 0.3),
++     xlab = "log2(mean count)",
++     .... [TRUNCATED] 
+
+> # Añadir línea de tendencia (lowess)
+> lines(lowess(mean_exp, var_exp), col = "red", lwd = 2)
+
+> # Añadir leyenda
+> legend("topright", legend = "Tendencia", col = "red", lwd = 2, bty = "n")
+
+> dev.off()
+null device 
+          1 
+
+> cat("  Transformación voom completada\n")
+  Transformación voom completada
+
+> cat(
++     "  Gráfico guardado en:",
++     file.path(dir_plots, "voom_mean_variance.pdf"),
++     "\n"
++ )
+  Gráfico guardado en: C:/Users/yeimi/Documents/project_rnaseq2026/plots/02_integra_normaliz/voom_mean_variance.pdf 
+
+> # 6. Guardar objetos procesados
+> cat("\nPASO 6: Guardando objetos procesados...\n")
+
+PASO 6: Guardando objetos procesados...
+
+> # Guardar objeto combinado
+> saveRDS(rse_combined, file = file.path(dir_02, "rse_combined_raw.rds"))
+
+> # Guardar DGEList
+> saveRDS(dge, file = file.path(dir_02, "dge_normalizado.rds"))
+
+> # Guardar datos voom
+> saveRDS(v, file = file.path(dir_02, "v_voom.rds"))
+
+> # Guardar matriz de diseño
+> saveRDS(design, file = file.path(dir_02, "design_matrix.rds"))
+
+> # 7. Visualización exploratoria rápida
+> cat("\nPASO 7: Generando visualizaciones exploratorias...\n")
+
+PASO 7: Generando visualizaciones exploratorias...
+
+> # Boxplot de lecturas totales por tejido
+> df_reads <- data.frame(
++     tejido = rse_combined$tejido_nombre,
++     total_reads = rse_combined$total .... [TRUNCATED] 
+
+> p1 <- ggplot(df_reads, aes(x = tejido, y = total_reads, fill = tejido)) +
++     geom_boxplot() +
++     theme_bw() +
++     labs(
++         title = "L ..." ... [TRUNCATED] 
+
+> ggsave(
++     file.path(dir_plots, "boxplot_total_reads.pdf"),
++     p1,
++     width = 8,
++     height = 6
++ )
+
+> p2 <- ggplot(df_reads, aes(x = tejido, y = detected_genes, fill = tejido)) +
++     geom_boxplot() +
++     theme_bw() +
++     labs(
++         title = .... [TRUNCATED] 
+
+> ggsave(
++     file.path(dir_plots, "boxplot_genes_detectados.pdf"),
++     p2,
++     width = 8,
++     height = 6
++ )
+
+> cat("  Gráficos guardados en:", dir_plots, "\n")
+  Gráficos guardados en: C:/Users/yeimi/Documents/project_rnaseq2026/plots/02_integra_normaliz 
+
+> # 8. Resumen final
+> cat("\n========================================\n")
+
+========================================
+
+> cat("RESUMEN FINAL:\n")
+RESUMEN FINAL:
+
+> cat("========================================\n")
+========================================
+
+> cat(
++     "Tejidos integrados:",
++     paste(unique(rse_combined$tejido), collapse = ", "),
++     "\n"
++ )
+Tejidos integrados: BRAIN, HEART, LUNG, LIVER, MUSCLE 
+
+> cat("Total genes:", nrow(rse_combined), "\n")
+Total genes: 63856 
+
+> cat("Total muestras:", ncol(rse_combined), "\n")
+Total muestras: 5660 
+
+> cat("Distribución de muestras por tejido:\n")
+Distribución de muestras por tejido:
+
+> print(table(rse_combined$tejido_nombre))
+
+Cerebro Corazón  Hígado Músculo  Pulmón 
+   2931     942     251     881     655 
+
+> # 9. Información de sesión
+> cat("\n========================================\n")
+
+========================================
+
+> cat("Información de sesión:\n")
+Información de sesión:
+
+> sessioninfo::session_info()
+─ Session info ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ setting  value
+ version  R version 4.5.1 (2025-06-13 ucrt)
+ os       Windows 11 x64 (build 26200)
+ system   x86_64, mingw32
+ ui       Positron
+ language (EN)
+ collate  Spanish_Mexico.utf8
+ ctype    Spanish_Mexico.utf8
+ tz       America/Mexico_City
+ date     2026-02-22
+ pandoc   NA
+ quarto   ERROR: Unknown command "TMPDIR=C:/Users/yeimi/AppData/Local/Temp/Rtmpi6lCla/file9d07cce2b47". Did you mean command "create"? @ c:\\PROGRA~1\\Positron\\RESOUR~1\\app\\quarto\\bin\\quarto.exe
+
+─ Packages ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ package              * version   date (UTC) lib source
+ abind                  1.4-8     2024-09-12 [1] CRAN (R 4.5.2)
+ Biobase              * 2.70.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ BiocFileCache          3.0.0     2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ BiocGenerics         * 0.56.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ BiocIO                 1.20.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ BiocParallel           1.44.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ Biostrings             2.78.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ bit                    4.6.0     2025-03-06 [1] CRAN (R 4.5.1)
+ bit64                  4.6.0-1   2025-01-16 [1] CRAN (R 4.5.1)
+ bitops                 1.0-9     2024-10-03 [1] CRAN (R 4.5.2)
+ blob                   1.3.0     2026-01-14 [1] CRAN (R 4.5.2)
+ cachem                 1.1.0     2024-05-16 [1] CRAN (R 4.5.1)
+ cigarillo              1.0.0     2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ cli                    3.6.5     2025-04-23 [1] CRAN (R 4.5.1)
+ codetools              0.2-20    2024-03-31 [2] CRAN (R 4.5.1)
+ crayon                 1.5.3     2024-06-20 [1] CRAN (R 4.5.1)
+ curl                   7.0.0     2025-08-19 [1] CRAN (R 4.5.2)
+ data.table             1.18.2.1  2026-01-27 [1] CRAN (R 4.5.2)
+ DBI                    1.2.3     2024-06-02 [1] CRAN (R 4.5.2)
+ dbplyr                 2.5.1     2025-09-10 [1] CRAN (R 4.5.2)
+ DelayedArray           0.36.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ dplyr                  1.2.0     2026-02-03 [1] CRAN (R 4.5.2)
+ edgeR                * 4.8.2     2025-12-23 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ farver                 2.1.2     2024-05-13 [1] CRAN (R 4.5.1)
+ fastmap                1.2.0     2024-05-15 [1] CRAN (R 4.5.1)
+ filelock               1.0.3     2023-12-11 [1] CRAN (R 4.5.2)
+ generics             * 0.1.4     2025-05-09 [1] CRAN (R 4.5.1)
+ GenomicAlignments      1.46.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ GenomicRanges        * 1.62.1    2025-12-08 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ ggplot2              * 4.0.2     2026-02-03 [1] CRAN (R 4.5.2)
+ glue                   1.8.0     2024-09-30 [1] CRAN (R 4.5.1)
+ gtable                 0.3.6     2024-10-25 [1] CRAN (R 4.5.1)
+ here                 * 1.0.2     2025-09-15 [1] CRAN (R 4.5.2)
+ httr                   1.4.7     2023-08-15 [1] CRAN (R 4.5.2)
+ httr2                  1.2.2     2025-12-08 [1] CRAN (R 4.5.2)
+ IRanges              * 2.44.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ labeling               0.4.3     2023-08-29 [1] CRAN (R 4.5.0)
+ lattice                0.22-7    2025-04-02 [2] CRAN (R 4.5.1)
+ lifecycle              1.0.5     2026-01-08 [1] CRAN (R 4.5.2)
+ limma                * 3.66.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ locfit                 1.5-9.12  2025-03-05 [1] CRAN (R 4.5.2)
+ magrittr               2.0.4     2025-09-12 [1] CRAN (R 4.5.1)
+ Matrix                 1.7-3     2025-03-11 [2] CRAN (R 4.5.1)
+ MatrixGenerics       * 1.22.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ matrixStats          * 1.5.0     2025-01-07 [1] CRAN (R 4.5.2)
+ memoise                2.0.1     2021-11-26 [1] CRAN (R 4.5.1)
+ otel                   0.2.0     2025-08-29 [1] CRAN (R 4.5.2)
+ pillar                 1.11.1    2025-09-17 [1] CRAN (R 4.5.1)
+ pkgconfig              2.0.3     2019-09-22 [1] CRAN (R 4.5.1)
+ R.methodsS3            1.8.2     2022-06-13 [1] CRAN (R 4.5.2)
+ R.oo                   1.27.1    2025-05-02 [1] CRAN (R 4.5.2)
+ R.utils                2.13.0    2025-02-24 [1] CRAN (R 4.5.2)
+ R6                     2.6.1     2025-02-15 [1] CRAN (R 4.5.1)
+ ragg                   1.5.0     2025-09-02 [1] CRAN (R 4.5.2)
+ rappdirs               0.3.4     2026-01-17 [1] CRAN (R 4.5.2)
+ RColorBrewer           1.1-3     2022-04-03 [1] CRAN (R 4.5.0)
+ RCurl                  1.98-1.17 2025-03-22 [1] CRAN (R 4.5.2)
+ recount3             * 1.20.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ restfulr               0.0.16    2025-06-27 [1] CRAN (R 4.5.2)
+ rjson                  0.2.23    2024-09-16 [1] CRAN (R 4.5.2)
+ rlang                  1.1.7     2026-01-09 [1] CRAN (R 4.5.2)
+ rprojroot              2.1.1     2025-08-26 [1] CRAN (R 4.5.2)
+ Rsamtools              2.26.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ RSQLite                2.4.5     2025-11-30 [1] CRAN (R 4.5.2)
+ rtracklayer            1.70.1    2025-12-20 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ S4Arrays               1.10.1    2025-12-01 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ S4Vectors            * 0.48.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ S7                     0.2.1     2025-11-14 [1] CRAN (R 4.5.2)
+ scales                 1.4.0     2025-04-24 [1] CRAN (R 4.5.1)
+ Seqinfo              * 1.0.0     2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ sessioninfo          * 1.2.3     2025-02-05 [1] CRAN (R 4.5.2)
+ SparseArray            1.10.8    2025-12-16 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ statmod                1.5.1     2025-10-09 [1] CRAN (R 4.5.2)
+ SummarizedExperiment * 1.40.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ systemfonts            1.3.1     2025-10-01 [1] CRAN (R 4.5.2)
+ textshaping            1.0.4     2025-10-10 [1] CRAN (R 4.5.2)
+ tibble                 3.3.1     2026-01-11 [1] CRAN (R 4.5.2)
+ tidyselect             1.2.1     2024-03-11 [1] CRAN (R 4.5.1)
+ vctrs                  0.7.1     2026-01-23 [1] CRAN (R 4.5.2)
+ withr                  3.0.2     2024-10-28 [1] CRAN (R 4.5.1)
+ XML                    3.99-0.20 2025-11-08 [1] CRAN (R 4.5.2)
+ XVector                0.50.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)
+ yaml                   2.3.12    2025-12-10 [1] CRAN (R 4.5.2)
+
+ [1] C:/Users/yeimi/AppData/Local/R/win-library/4.5
+ [2] C:/Program Files/R/R-4.5.1/library
+ * ── Packages attached to the search path.
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+> sink()
